@@ -14,8 +14,13 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false // Helps with some hosting environments
-  }
+  },
+  connectionTimeout: 10000,  // Fail fast on Render cold starts (10s)
+  greetingTimeout: 10000
 });
+
+// Helper: get trimmed EMAIL_FROM (avoids SMTP rejection from trailing spaces)
+const EMAIL_FROM = (process.env.EMAIL_FROM || '').trim();
 
 // Verify transporter on startup
 transporter.verify((error, success) => {
@@ -80,7 +85,7 @@ export const sendOTP = async (email, otp, purpose) => {
   try {
     console.log(`📧 Attempting to send OTP to ${email}...`);
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: EMAIL_FROM,
       to: email,
       subject,
       html
@@ -152,7 +157,7 @@ export const sendOrderConfirmation = async (email, orderData) => {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: EMAIL_FROM,
       to: email,
       subject: `Order Confirmation - ${orderData.orderNumber}`,
       html
@@ -187,7 +192,7 @@ export const sendAdminAlert = async (subject, message) => {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: EMAIL_FROM,
       to: process.env.EMAIL_USER, // Send to admin email
       subject: `[ALERT] ${subject}`,
       html

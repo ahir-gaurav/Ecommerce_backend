@@ -81,6 +81,12 @@ router.post('/verify-otp', [
             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
+        // Explicitly check expiry (in case MongoDB TTL hasn't cleaned it up yet)
+        if (otpRecord.expiresAt < new Date()) {
+            await OTP.deleteMany({ email, purpose: 'registration' });
+            return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+        }
+
         // Verify user
         const user = await User.findOneAndUpdate(
             { email },
@@ -223,6 +229,12 @@ router.post('/reset-password', [
 
         if (!otpRecord) {
             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+        }
+
+        // Explicitly check expiry (in case MongoDB TTL hasn't cleaned it up yet)
+        if (otpRecord.expiresAt < new Date()) {
+            await OTP.deleteMany({ email, purpose: 'password-reset' });
+            return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
         }
 
         const user = await User.findOne({ email });
